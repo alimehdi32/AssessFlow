@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String       @id @default(uuid())
+  email        String       @unique
+  password     String
+  name         String
+  schoolName   String       @default("Delhi Public School")
+  schoolCity   String       @default("Bokaro Steel City")
+  refreshToken String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  assignments  Assignment[]
+}
+
+model Assignment {
+  id              String               @id @default(uuid())
+  title           String
+  subject         String               @default("General")
+  class           String               @default("10th")
+  dueDate         DateTime?
+  status          AssignmentStatus     @default(PENDING)
+  additionalInfo  String?
+  totalQuestions  Int                  @default(0)
+  totalMarks      Int                  @default(0)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  userId          String
+  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sections        AssignmentSection[]
+  uploadedFiles   UploadedFile[]
+  generationJobs  GenerationJob[]
+  questionTypes   QuestionTypeConfig[]
+}
+
+model AssignmentSection {
+  id           String     @id @default(uuid())
+  title        String
+  instruction  String?
+  order        Int        @default(0)
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  questions    Question[]
+}
+
+model Question {
+  id         String            @id @default(uuid())
+  text       String
+  marks      Int
+  difficulty Difficulty        @default(MEDIUM)
+  answer     String?
+  order      Int               @default(0)
+  sectionId  String
+  section    AssignmentSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+}
+
+model UploadedFile {
+  id            String     @id @default(uuid())
+  filename      String
+  originalName  String
+  mimetype      String
+  size          Int
+  path          String
+  extractedText String?    @db.Text
+  assignmentId  String
+  assignment    Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  createdAt     DateTime   @default(now())
+}
+
+model GenerationJob {
+  id           String     @id @default(uuid())
+  jobId        String     @unique
+  status       JobStatus  @default(WAITING)
+  error        String?
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model QuestionTypeConfig {
+  id           String     @id @default(uuid())
+  type         String
+  quantity     Int
+  marks        Int
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+}
+
+enum AssignmentStatus {
+  PENDING
+  GENERATING
+  COMPLETED
+  FAILED
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum JobStatus {
+  WAITING
+  ACTIVE
+  COMPLETED
+  FAILED
+}
